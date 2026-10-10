@@ -12,3 +12,5 @@ A response must have valid length, checksum or MAC and expected source/target/co
 Battery, temperature, mileage, mode and controller firmware use Ninebot family mappings and require comparison with the official app. Current speed and max speed remain unavailable. There is no automatic polling.
 
 This project is distributed under AGPL-3.0-only. Complete source is included in this download; preserve LICENSE and attribution when deploying it.
+
+Pairing approval requests repeat once per second for up to 30 seconds, including when the dashboard is silent. The final serial acknowledgement is retried up to three times. Other errors stop the handshake. Hardware log confirmed a valid initial challenge from NBScooter4546; complete authentication remains unverified.

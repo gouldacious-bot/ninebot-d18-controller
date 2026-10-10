@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only. See LICENSE and PROTOCOL_NOTES.md. */
-/** Ninebot D18 BLE diagnostics. Read-only: does not send commands. */
+/** Ninebot D18 BLE diagnostics: pairing and read-only telemetry commands. */
 class NinebotBLEProtocol {
   constructor() {
     this.device = null;
@@ -136,7 +136,11 @@ class NinebotBLEProtocol {
     response.catch(()=>{});
     const pending={target,command,index,reply:command===1?4:command,resolve,reject};
     pending.timer=setTimeout(()=>{
-      if(this.pending===pending)this.failPending(new Error('No valid response to command 0x'+command.toString(16)+'. Firmware may need another protocol.'));
+      if(this.pending===pending) {
+        const error=new Error('No valid response to command 0x'+command.toString(16)+'.');
+        error.code='RESPONSE_TIMEOUT';
+        this.failPending(error);
+      }
     },timeout);
     this.pending=pending;
     try {
@@ -164,14 +168,32 @@ class NinebotBLEProtocol {
       this.report('Press the scooter power button once now to approve pairing.');
       const deadline=Date.now()+30000;
       let confirmed=false;
+      let attempts=0;
       while(Date.now()<deadline) {
-        const ping=await this.request(0x21,0x5c,0,Array.from(key));
-        if(ping[6]===1) {confirmed=true;break;}
-        await new Promise(r=>setTimeout(r,1000));
+        const started=Date.now();
+        attempts++;
+        this.report('Pairing approval request '+attempts+' (press power once; waiting up to 30 seconds)...');
+        try {
+          const ping=await this.request(0x21,0x5c,0,Array.from(key),Math.min(1000,deadline-Date.now()));
+          if(ping[6]===1) {confirmed=true;break;}
+        } catch(error) {
+          if(error.code!=='RESPONSE_TIMEOUT')throw error;
+        }
+        const pause=Math.min(Math.max(0,1000-(Date.now()-started)),Math.max(0,deadline-Date.now()));
+        if(pause)await new Promise(r=>setTimeout(r,pause));
       }
-      if(!confirmed)throw new Error('Power-button approval timed out.');
-      const paired=await this.request(0x21,0x5d,0,Array.from(serial));
-      if(paired[6]!==1)throw new Error('Scooter did not acknowledge authentication.');
+      if(!confirmed)throw new Error('Power-button approval was not received within 30 seconds. Reconnect to retry.');
+      let paired=false;
+      for(let attempt=1;attempt<=3;attempt++) {
+        this.report('Final pairing acknowledgement: attempt '+attempt+' of 3...');
+        try {
+          const reply=await this.request(0x21,0x5d,0,Array.from(serial),2000);
+          if(reply[6]===1) {paired=true;break;}
+        } catch(error) {
+          if(error.code!=='RESPONSE_TIMEOUT')throw error;
+        }
+      }
+      if(!paired)throw new Error('Scooter did not acknowledge final authentication. Reconnect to retry.');
       this.authenticated=true;
       this.report('Authenticated: scooter acknowledged pairing.');
     } catch(error) {
