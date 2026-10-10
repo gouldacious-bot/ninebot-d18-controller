@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ninebot D18 Controller</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛴 Ninebot D18 Controller</h1>
+            <p class="subtitle">Bluetooth Speed & Settings Control</p>
+        </header>
+
+        <!-- Connection Section -->
+        <div class="card connection-card">
+            <h2>Connection</h2>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot disconnected"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <button id="connectBtn" class="btn btn-primary">Connect to Scooter</button>
+            <button id="disconnectBtn" class="btn btn-secondary" style="display:none;">Disconnect</button>
+            <p class="info-text">Make sure Bluetooth is enabled and your D18 is nearby.</p>
+        </div>
+
+        <!-- Telemetry Section -->
+        <div class="card telemetry-card" id="telemetryCard" style="display:none;">
+            <h2>📊 Scooter Status</h2>
+            <div class="telemetry-grid">
+                <div class="telemetry-item">
+                    <span class="label">Current Speed</span>
+                    <span class="value" id="currentSpeed">-- km/h</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">Max Speed</span>
+                    <span class="value" id="maxSpeed">-- km/h</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">Battery</span>
+                    <span class="value" id="battery">-- %</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">Distance</span>
+                    <span class="value" id="distance">-- km</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">Temp</span>
+                    <span class="value" id="temperature">-- °C</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">Mode</span>
+                    <span class="value" id="mode">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speed Control Section -->
+        <div class="card speed-control-card" id="speedControlCard" style="display:none;">
+            <h2>⚡ Speed Control</h2>
+            
+            <div class="speed-display">
+                <div class="speed-value" id="speedValue">40</div>
+                <div class="speed-unit">km/h</div>
+            </div>
+
+            <input 
+                type="range" 
+                id="speedSlider" 
+                min="20" 
+                max="55" 
+                value="40" 
+                class="speed-slider"
+            >
+
+            <div class="speed-presets">
+                <button class="preset-btn" data-speed="20">20</button>
+                <button class="preset-btn" data-speed="30">30</button>
+                <button class="preset-btn active" data-speed="40">40</button>
+                <button class="preset-btn" data-speed="50">50</button>
+                <button class="preset-btn" data-speed="55">55</button>
+            </div>
+
+            <button id="applySpeedBtn" class="btn btn-success">Apply Speed Limit</button>
+            <p class="warning-text">⚠️ Higher speeds reduce range and increase risk. Ride safely!</p>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="card settings-card" id="settingsCard" style="display:none;">
+            <h2>⚙️ Settings</h2>
+            
+            <div class="setting-item">
+                <label>
+                    <input type="checkbox" id="drlToggle">
+                    DRL (Daytime Running Light)
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <label for="volumeControl">Speaker Volume</label>
+                <input type="range" id="volumeControl" min="0" max="100" value="50" class="slider">
+            </div>
+
+            <div class="setting-item">
+                <label for="brightnessControl">Light Brightness</label>
+                <input type="range" id="brightnessControl" min="0" max="100" value="75" class="slider">
+            </div>
+
+            <button id="applySettingsBtn" class="btn btn-success">Apply Settings</button>
+        </div>
+
+        <!-- Log Section -->
+        <div class="card log-card" id="logCard" style="display:none;">
+            <h2>📝 Log</h2>
+            <div class="log-container" id="logContainer">
+                <p class="log-entry">Ready to connect...</p>
+            </div>
+            <button id="clearLogBtn" class="btn btn-small">Clear Log</button>
+        </div>
+
+        <!-- Error Messages -->
+        <div class="alert alert-error" id="errorAlert" style="display:none;">
+            <span id="errorMessage"></span>
+            <button class="close-btn" onclick="closeAlert('errorAlert')">&times;</button>
+        </div>
+
+        <div class="alert alert-success" id="successAlert" style="display:none;">
+            <span id="successMessage"></span>
+            <button class="close-btn" onclick="closeAlert('successAlert')">&times;</button>
+        </div>
+    </div>
+
+    <script src="ble-protocol.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
