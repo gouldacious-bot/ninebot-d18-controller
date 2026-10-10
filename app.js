@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-only. See LICENSE and PROTOCOL_NOTES.md. */
 /** Ninebot D18 diagnostic dashboard. No invented telemetry or scooter writes. */
 class NinebotD18App {
   constructor() {
@@ -15,6 +16,8 @@ class NinebotD18App {
       this.log('Bluetooth connection lost', 'error');
     };
     this.receivedPackets = 0;
+    this.telemetry = {};
+    this.protocol.onTelemetry = (name,value) => { this.telemetry[name]=value; this.updateTelemetryDisplay(); };
     this.initializeUI();
   }
   initializeUI() {
@@ -31,7 +34,7 @@ class NinebotD18App {
     if (card) {
       const explanation = document.createElement('p');
       explanation.className = 'info-text';
-      explanation.textContent = 'Bluetooth diagnostics only. Live telemetry is not implemented yet.';
+      explanation.textContent = 'Bluetooth diagnostics only. Experimental encrypted telemetry. Approve pairing with the scooter power button when prompted; register mappings need verification.';
       const check = document.createElement('button');
       check.id = 'diagnosticsBtn';
       check.className = 'btn btn-primary';
@@ -43,10 +46,21 @@ class NinebotD18App {
         finally { check.disabled = !this.isConnected; }
       });
       check.disabled = true;
-      card.append(explanation, check);
+      const read = document.createElement('button');
+      read.id='readTelemetryBtn'; read.className='btn btn-primary';
+      read.textContent='Authenticate and Read Telemetry'; read.disabled=true;
+      read.addEventListener('click',async()=>{
+        read.disabled=true; check.disabled=true;
+        try {
+          await this.protocol.authenticate();
+          await this.protocol.readAllTelemetry();
+        } catch(error) {this.log(error.message,'error');this.showError(error.message);}
+        finally {read.disabled=!this.isConnected;check.disabled=!this.isConnected;}
+      });
+      card.append(explanation, check, read);
     }
     this.updateTelemetryDisplay();
-    this.log('Diagnostic mode: scooter writes disabled. Waiting for real BLE notifications.', 'info');
+    this.log('Diagnostic mode: settings writes disabled. Encrypted handshake and read-only telemetry available (experimental).', 'info');
   }
   async connect() {
     const button = document.getElementById('connectBtn');
@@ -54,6 +68,7 @@ class NinebotD18App {
     try {
       this.log('Select your scooter in the Bluetooth chooser...', 'info');
       this.receivedPackets = 0;
+      this.telemetry = {};
       await this.protocol.connect();
       this.isConnected = true;
       this.updateConnectionUI(true);
@@ -80,6 +95,8 @@ class NinebotD18App {
     this.log('Disconnected', 'info');
   }
   updateConnectionUI(connected) {
+    const read = document.getElementById('readTelemetryBtn');
+    if(read)read.disabled=!connected;
     const check = document.getElementById('diagnosticsBtn');
     if (check) check.disabled = !connected;
     const dot = document.querySelector('.status-dot');
@@ -94,7 +111,10 @@ class NinebotD18App {
   updateTelemetryDisplay() {
     for (const id of ['currentSpeed','maxSpeed','battery','distance','temperature','mode']) {
       const el = document.getElementById(id);
-      if (el) el.textContent = '--';
+      if (el) {
+        const units={battery:' %',temperature:' °C',distance:' km'};
+        el.textContent = this.telemetry[id] === undefined ? '--' : String(this.telemetry[id])+(units[id]||'');
+      }
     }
   }
   updateSpeedDisplay(value) {
